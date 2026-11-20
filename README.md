@@ -1,112 +1,49 @@
-# Forest Guard | حارس الغابة
-> **نظام إنذار مبكر ورصد بيئي متكامل للكشف عن حرائق الغابات والنشاط الزلزالي باستخدام ESP32**
->
-> An integrated IoT early warning system designed for forest safety, wildfire gas detection, and seismic tremor monitoring powered by ESP32.
+# Forest Guard
 
----
+IoT environmental station for wildfire and seismic activity monitoring using ESP32.
 
-## 📌 نظرة عامة | Overview
+## Features
 
-مشروع **Forest Guard** هو محطة رصد بيئية محمولة تعتمد على متحكم **ESP32** لحماية الغابات والمناطق الطبيعية من خطرين رئيسيين:
-1. **حرائق الغابات والتسريبات الغازية**: عبر استشعار الدخان والغازات الناتجة عن الاحتراق بمستشعر MQ-9 ومتابعة درجات الحرارة والرطوبة بحساس DHT11.
-2. **النشاط الزلزالي والهزات الأرضية**: عبر قياس تسارع التربة والاهتزازات المفاجئة بدقة متناهية بمستشعر MPU-6050.
+- **Wildfire & Smoke Detection**: Reads gas and smoke levels using the MQ-9 sensor.
+- **Seismic Tremor Detection**: Tracks soil vibration and acceleration with the MPU-6050 sensor.
+- **Weather Telemetry**: Measures ambient temperature and humidity with the DHT-11 sensor.
+- **Disaster Event Logger**: Automatically logs every fire alert and earthquake event in browser storage with start time, duration, and peak values.
+- **Real-Time Seismograph**: Dynamic canvas visualizer showing vibration waveforms.
+- **CSV Export**: Export recorded hazard logs to a spreadsheet-compatible file.
+- **Web Audio Alarm**: Built-in sound generator for fire and earthquake alerts without external audio files.
+- **Simulation Mode**: Built-in simulator to test dashboard alerts without physical hardware.
+- **Standalone Operation**: Hosts a local Wi-Fi Access Point (`ESP32-Forest-Guard`) and an embedded HTTP API (`/api/data`).
 
-يقوم النظام بإنشاء شبكة واي فاي محلية (SoftAP) تبث خادم ويب مدمج يتيح للمراقبين أو فرق الدفاع المدني الاتصال المباشر من الحواسيب أو الهواتف الذكية لمتابعة القياسات اللحظية عبر لوحة تحكم متطورة تسجل كافة الحوادث تلقائياً.
+## Project Layout
 
----
+- `index.html`: Main monitoring dashboard.
+- `style.css`: Visual styling and dark theme.
+- `script.js`: Data polling, waveform rendering, and incident logging logic.
+- `firmware/forest_guard/forest_guard.ino`: ESP32 firmware sketch.
+- `esp32-code.txt`: Reference firmware source.
 
-## ✨ المميزات الرئيسية | Key Features
+## Hardware Wiring
 
-- **واجهة تحكم حديثة (Cyber-Command Center)**:
-  - تصميم داكن عصري مستوحى من غرف العمليات.
-  - دعم كامل للغة العربية والعمل بدون اتصال بالإنترنت (Offline-First).
-- **توثيق وتسجيل الكوارث (Disaster Event Logger)**:
-  - تسجيل آلي وتلقائي لكل هزة زلزالية أو إنذار حريق مع توثيق وقت البداية، المدة بالثواني، وذروة الشدة المسجلة.
-  - حفظ السجلات محلياً في ذاكرة المتصفح (`LocalStorage`).
-  - إمكانية تصدير التقرير كملف **CSV / Excel** مدعوم باللغة العربية.
-- **راسم الزلازل اللحظي (Live Seismograph)**:
-  - لوحة رسم بيانية حية (Canvas) ترسم موجات الاهتزاز في الوقت الفعلي مع خط عتبة الخطر (0.20g).
-- **إنذارات صوتية ومرئية**:
-  - صفارة إنذار مدمجة على العتاد (Buzzer) ومؤشر LED.
-  - صفارة إلكترونية ذكية داخل المتصفح (Web Audio API) بدون الحاجة لملفات صوت خارجية.
-- **مؤشر خطر اشتعال الغابات (Fire Weather Index)**:
-  - خوارزمية ذكية تحسب خطورة الحريق بناءً على الحرارة والرطوبة ونسبة الغاز.
-- **وضع المحاكاة (Simulation Mode)**:
-  - إمكانية اختبار كافة الإنذارات وسيناريوهات الكوارث (حريق، زلزال، أو كلاهما) مباشرة في المتصفح دون الحاجة لوجود العتاد.
+| Component | Component Pin | ESP32 Pin | Purpose |
+| :--- | :--- | :--- | :--- |
+| MQ-9 Gas Sensor | AOUT | GPIO 34 | Analog gas measurement |
+| MPU-6050 | SDA | GPIO 21 | I2C data |
+| MPU-6050 | SCL | GPIO 22 | I2C clock |
+| DHT-11 | Data | GPIO 15 | Temperature & humidity |
+| I2C LCD 16x2 | SDA / SCL | GPIO 21 / 22 | Local telemetry display |
+| Buzzer | Positive | GPIO 4 | Acoustic alarm |
+| Alert LED | Anode | GPIO 2 | Visual hazard indicator |
 
----
+## Firmware Setup
 
-## 🗂️ هيكل المشروع | Project Structure
+1. Open `firmware/forest_guard/forest_guard.ino` in the Arduino IDE.
+2. Install the necessary libraries (`DHT` and `LiquidCrystal_I2C`).
+3. Select your ESP32 board and serial port, then flash the sketch.
 
-```text
-forest-guard/
-├── firmware/
-│   └── forest_guard/
-│       └── forest_guard.ino    # كود الأردوينو لمتحكم ESP32
-├── index.html                  # واجهة لوحة التحكم الرئيسية
-├── style.css                   # تنسيقات الواجهة ونظام الثيم الداكن
-├── script.js                   # محرك التحديث اللحظي ورسم المنحنيات وتسجيل الكوارث
-├── esp32-code.txt              # نسخة مرجعية سريعة لكود العتاد
-├── .gitignore                  # استبعاد الملفات غير الضرورية
-└── README.md                   # دليل توثيق المشروع
-```
+## Dashboard Usage
 
----
-
-## 🔌 المكونات وتوصيل الأسلاك | Hardware & Pinout
-
-### المكونات المستخدمة:
-1. متحكم **ESP32 NodeMCU** (30 أو 38 دبوس).
-2. مستشعر غاز ودخان **MQ-9**.
-3. مستشعر حركة واهتزاز **MPU-6050** (I2C).
-4. مستشعر حرارة ورطوبة **DHT-11**.
-5. شاشة كريستالية **LCD 16x2** مع محول I2C (العنوان: `0x27`).
-6. جرس إنذار نشط **Buzzer** ومصباح **LED** أحمر مع مقاومة مناسبة.
-
-### جدول التوصيل (Pinout Table):
-
-| المكون (Component) | دبوس المكون (Pin) | مدخل ESP32 (GPIO) | نوع الإشارة | ملاحظات |
-| :--- | :--- | :--- | :--- | :--- |
-| **حساس الغاز MQ-9** | AOUT | **GPIO 34** | Analog (12-bit) | قراءة تناظرية للدخان والغاز |
-| **حساس MPU-6050** | SDA | **GPIO 21** | I2C Data | ناقل البيانات التسلسلي |
-| **حساس MPU-6050** | SCL | **GPIO 22** | I2C Clock | نبضات التزامن |
-| **حساس DHT-11** | DATA / OUT | **GPIO 15** | Digital IO | قياس الحرارة والرطوبة |
-| **شاشة LCD I2C** | SDA | **GPIO 21** | I2C Data | متصل بالتوازي مع MPU6050 |
-| **شاشة LCD I2C** | SCL | **GPIO 22** | I2C Clock | متصل بالتوازي مع MPU6050 |
-| **جرس الإنذار Buzzer** | (+) | **GPIO 4** | Digital Output | يصدر صوتاً متقطعاً عند الخطر |
-| **مؤشر الإنذار LED** | الأنود (+) | **GPIO 2** | Digital Output | يضيء عند الخطر |
-
----
-
-## 🚀 طريقة التشغيل والرفع | How to Run
-
-### أولاً: برمجة لوحة ESP32
-1. افتح برنامج **Arduino IDE**.
-2. ثبّت المكتبات المطلوبة من مدير المكتبات (Library Manager):
-   - `DHT sensor library` (Adafruit)
-   - `LiquidCrystal_I2C` (by Frank de Brabander)
-3. افتح الملف: `firmware/forest_guard/forest_guard.ino`.
-4. اختر نوع اللوحة **ESP32 Dev Module** والمنفذ التسلسلي (COM / Serial Port) المناسب.
-5. اضغط على زر **Upload** للرفع.
-
-### ثانياً: الاتصال واستعراض لوحة التحكم
-1. بعد إقلاع الـ ESP32، ستظهر شبكة واي فاي باسم:
-   - **اسم الشبكة (SSID)**: `ESP32-Forest-Guard`
-   - **كلمة المرور (Password)**: `12345678`
-2. اتصل بهذه الشبكة من الحاسوب أو الهاتف.
-3. افتح ملف `index.html` في أي متصفح ويب حديث، وسيتصل النظام تلقائياً بالمتحكم عبر العنوان الافتراضي `http://192.168.4.1/api/data`.
-
----
-
-## 🌐 النشر على GitHub Pages
-
-المشروع مصمم ليعمل كصفحة ثابتة (Static Web App). يمكنك تفعيل **GitHub Pages** على مستودعك:
-1. اذهب إلى إعدادات المستودع: `Settings` > `Pages`.
-2. اختر المصدر: `Deploy from a branch`، واختر فرع `main` والمجلد `/ (root)`.
-3. اضغط **Save** وسيكون لديك رابط مباشر للموقع لتجربته بوضع المحاكاة في أي وقت!
-
----
-
-## 📄 الترخيص | License
-
-هذا المشروع متاح تحت رخصة مفتوحة المصدر للاستخدام التعليمي والتطويري.
+1. Connect your computer or phone to the Wi-Fi network:
+   - SSID: `ESP32-Forest-Guard`
+   - Password: `12345678`
+2. Open `index.html` in any web browser.
+3. The dashboard connects to `http://192.168.4.1/api/data` and starts displaying real-time readings.
