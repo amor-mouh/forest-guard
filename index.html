@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Guard | نظام حارس الغابة الذكي للإنذار المبكر</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- TOP EMERGENCY ALERT BAR (ACTIVE WHEN FIRE OR QUAKE DETECTED) -->
+    <div id="emergencyBar" class="emergency-bar hidden" role="alert">
+        <div class="emergency-content">
+            <span class="emergency-beacon"></span>
+            <span class="emergency-icon" id="emergencyIcon">🚨</span>
+            <div class="emergency-text">
+                <strong id="emergencyTitle">تحذير طارئ! تم اكتشاف خطر!</strong>
+                <span id="emergencyDesc">يرجى متابعة القراءات واتخاذ إجراءات السلامة فوراً.</span>
+            </div>
+        </div>
+        <div class="emergency-actions">
+            <button id="silenceBtn" class="btn-emergency-action" title="إسكات صوت الإنذار">
+                🔕 إسكات التنبيه
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN HEADER -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="brand-logo">
+                <svg viewBox="0 0 48 48" class="logo-svg" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="24" cy="24" r="22" stroke="url(#logoGrad)" stroke-width="2.5"
+                        fill="rgba(15, 23, 42, 0.7)" />
+                    <!-- Shield outline -->
+                    <path d="M24 6L11 11V21C11 30.5 16.5 39 24 42C31.5 39 37 30.5 37 21V11L24 6Z" stroke="#10b981"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <!-- Pine Tree / Nature -->
+                    <path d="M24 13L18 21H21L16 27H21L18 33H30L27 27H32L27 21H30L24 13Z" fill="#10b981" opacity="0.9" />
+                    <!-- Trunk -->
+                    <rect x="22.5" y="33" width="3" height="4" rx="1" fill="#059669" />
+                    <!-- Seismic / Radar ring -->
+                    <path d="M14 24C14 24 18 20 24 20C30 20 34 24 34 24" stroke="#f59e0b" stroke-width="1.8"
+                        stroke-linecap="round" stroke-dasharray="2 3" />
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#10b981" />
+                            <stop offset="0.5" stop-color="#06b6d4" />
+                            <stop offset="1" stop-color="#3b82f6" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="brand-titles">
+                <div class="brand-title-wrap">
+                    <h1>حارس الغابة <span>FOREST GUARD</span></h1>
+                    <span class="system-tag">v2.5 Pro IoT</span>
+                </div>
+                <p class="brand-subtitle">محطة الرصد البيئي الذكي والتسجيل الآلي للزلازل والحرائق</p>
+            </div>
+        </div>
+
+        <!-- HEADER CONTROLS -->
+        <div class="header-controls">
+            <!-- Audio toggle -->
+            <button id="soundToggleBtn" class="ctrl-btn" title="تفعيل أو كتم صوت الإنذار">
+                <span class="ctrl-icon">🔊</span>
+                <span class="ctrl-label">الصوت: مفعّل</span>
+            </button>
+
+            <!-- Simulation Mode Toggle -->
+            <button id="simToggleBtn" class="ctrl-btn sim-btn" title="تجربة المحاكاة للتحقق من عمل الإنذار والتسجيل">
+                <span class="ctrl-icon">🧪</span>
+                <span class="ctrl-label">وضع المحاكاة: معطّل</span>
+            </button>
+
+            <!-- Settings / IP -->
+            <button id="settingsBtn" class="ctrl-btn icon-only" title="إعدادات الاتصال">
+                ⚙️
+            </button>
+
+            <!-- Connection Status Pill -->
+            <div id="connectionPill" class="connection-pill disconnected">
+                <span class="status-dot"></span>
+                <span id="connectionText">جاري الاتصال...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- SIMULATION BAR (ONLY VISIBLE WHEN SIMULATION ACTIVE) -->
+    <div id="simControlsBar" class="sim-controls-bar hidden">
+        <span class="sim-badge">🧪 وضع الاختبار والمحاكاة النشط</span>
+        <span class="sim-hint">اختر سيناريو لتجربة استجابة النظام وتسجيل الإنذارات:</span>
+        <div class="sim-button-group">
+            <button class="sim-action-btn" data-sim="normal">🌱 بيئة طبيعية</button>
+            <button class="sim-action-btn danger-sim" data-sim="fire">🔥 محاكاة حريق (غاز مرتفع)</button>
+            <button class="sim-action-btn warning-sim" data-sim="quake">🌋 محاكاة زلزال (اهتزاز MPU)</button>
+            <button class="sim-action-btn critical-sim" data-sim="both">💥 زلزال وحريق معاً</button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="dashboard-main">
+
+        <!-- SYSTEM OVERVIEW BAR -->
+        <section class="overview-bar">
+            <!-- Overall Status Card -->
+            <div class="overview-card status-master-card" id="masterStatusCard">
+                <div class="overview-icon-box">
+                    <span id="masterStatusIcon">🛡️</span>
+                </div>
+                <div class="overview-details">
+                    <span class="overview-label">الحالة العامة للنظام</span>
+                    <h2 id="masterStatusText">جاري فحص المستشعرات...</h2>
+                    <span class="overview-sub" id="masterStatusSub">الاتصال بنقطة وصول ESP32 (192.168.4.1)</span>
+                </div>
+                <div class="radar-ping-wrap">
+                    <span class="radar-pulse"></span>
+                </div>
+            </div>
+
+            <!-- Quick Metrics -->
+            <div class="overview-card metric-card">
+                <span class="overview-label">مؤشر خطر الحرائق (FWI)</span>
+                <div class="metric-val-wrap">
+                    <span id="fireRiskVal" class="metric-val text-success">منخفض</span>
+                    <span class="metric-pill safe" id="fireRiskPill">آمن</span>
+                </div>
+                <span class="overview-sub" id="fireRiskCalc">حسب معايير الحرارة والرطوبة</span>
+            </div>
+
+            <div class="overview-card metric-card">
+                <span class="overview-label">إجمالي الكوارث المسجلة</span>
+                <div class="metric-val-wrap">
+                    <span id="totalEventsCount" class="metric-val">0</span>
+                    <span class="metric-unit">حادثة</span>
+                </div>
+                <div class="mini-counter-pills">
+                    <span class="mini-pill fire-pill" id="totalFiresCount">🔥 0 حريق</span>
+                    <span class="mini-pill quake-pill" id="totalQuakesCount">🌋 0 زلزال</span>
+                </div>
+            </div>
+
+            <div class="overview-card metric-card">
+                <span class="overview-label">زمن تشغيل الوحدة (Uptime)</span>
+                <div class="metric-val-wrap">
+                    <span id="uptimeVal" class="metric-val font-mono">--:--:--</span>
+                </div>
+                <span class="overview-sub" id="lastSyncTime">آخر استجابة: --</span>
+            </div>
+        </section>
+
+        <!-- SENSORS GRID -->
+        <section class="sensors-grid">
+
+            <!-- CARD 1: GAS & FIRE (MQ-9) -->
+            <article class="sensor-card gas-card" id="gasCard">
+                <div class="sensor-card-header">
+                    <div class="sensor-title-group">
+                        <span class="sensor-icon">🔥</span>
+                        <div>
+                            <h3>مستوى الغاز والأدخنة (MQ-9)</h3>
+                            <span class="sensor-sub">Gas & Smoke Concentration</span>
+                        </div>
+                    </div>
+                    <span id="gasBadge" class="sensor-badge badge-safe">طبيعي</span>
+                </div>
+
+                <div class="sensor-card-body">
+                    <div class="value-display-row">
+                        <div class="main-value">
+                            <span id="gasValue" class="value-number">--</span>
+                            <span class="value-unit">ADC</span>
+                        </div>
+                        <div class="threshold-info">
+                            <span>حد الخطر:</span>
+                            <strong id="gasThresholdDisplay">2000 ADC</strong>
+                        </div>
+                    </div>
+
+                    <!-- Visual Progress Gauge Bar -->
+                    <div class="gauge-container">
+                        <div class="gauge-track">
+                            <div id="gasBar" class="gauge-fill" style="width: 0%;"></div>
+                            <!-- Threshold Marker Line -->
+                            <div class="gauge-marker" style="left: 48.8%;" title="حد الخطر (2000 / 4095)"></div>
+                        </div>
+                        <div class="gauge-labels">
+                            <span>0 (نقي)</span>
+                            <span class="marker-label">عتبة الإنذار (2000)</span>
+                            <span>4095 (تشبع)</span>
+                        </div>
+                    </div>
+
+                    <div class="sensor-alert-box" id="gasAlertDetails">
+                        <span id="gasStatusText">المستشعر مستقر وضمن الحدود الطبيعية.</span>
+                    </div>
+                </div>
+
+                <div class="sensor-card-footer">
+                    <span>مدخل الحساس: Pin 34 (Analog 12-bit)</span>
+                    <span id="gasPeakEver">أعلى غاز: -- ADC</span>
+                </div>
+            </article>
+
+            <!-- CARD 2: SEISMIC ACTIVITY & VIBRATION (MPU-6050) -->
+            <article class="sensor-card quake-card" id="quakeCard">
+                <div class="sensor-card-header">
+                    <div class="sensor-title-group">
+                        <span class="sensor-icon">📳</span>
+                        <div>
+                            <h3>النشاط الزلزالي والاهتزاز (MPU-6050)</h3>
+                            <span class="sensor-sub">Seismic Vibration Monitor</span>
+                        </div>
+                    </div>
+                    <span id="quakeBadge" class="sensor-badge badge-safe">مستقر</span>
+                </div>
+
+                <div class="sensor-card-body">
+                    <div class="value-display-row">
+                        <div class="main-value">
+                            <span id="vibration" class="value-number">--</span>
+                            <span class="value-unit">g</span>
+                        </div>
+                        <div class="secondary-stats">
+                            <div>
+                                <span class="stat-label">ذروة الهزة الحالية:</span>
+                                <strong id="peakVibration" class="stat-value font-mono">0.000 g</strong>
+                            </div>
+                            <div>
+                                <span class="stat-label">عتبة الخطر:</span>
+                                <strong class="stat-value text-warning font-mono">0.200 g</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Real-Time Seismograph Canvas -->
+                    <div class="seismograph-wrapper">
+                        <div class="seismo-header">
+                            <span class="seismo-title">مخطط الاهتزاز اللحظي (Seismograph Waveform)</span>
+                            <span class="seismo-rate">20 ms sampling</span>
+                        </div>
+                        <canvas id="seismographCanvas" width="480" height="90"></canvas>
+                    </div>
+
+                    <div class="sensor-alert-box" id="quakeAlertDetails">
+                        <span id="quakeStatusText">الأرض مستقرة ولا يوجد أي نشاط زلزالي.</span>
+                    </div>
+                </div>
+
+                <div class="sensor-card-footer">
+                    <span>بروتوكول: I2C (SDA 21 / SCL 22)</span>
+                    <span id="quakePeakEver">أقوى هزة: -- g</span>
+                </div>
+            </article>
+
+            <!-- CARD 3: TEMPERATURE (DHT-11) -->
+            <article class="sensor-card temp-card">
+                <div class="sensor-card-header">
+                    <div class="sensor-title-group">
+                        <span class="sensor-icon">🌡️</span>
+                        <div>
+                            <h3>درجة الحرارة (DHT-11)</h3>
+                            <span class="sensor-sub">Ambient Temperature</span>
+                        </div>
+                    </div>
+                    <span id="tempBadge" class="sensor-badge badge-normal">معتدل</span>
+                </div>
+
+                <div class="sensor-card-body">
+                    <div class="value-display-row">
+                        <div class="main-value">
+                            <span id="temperature" class="value-number">--</span>
+                            <span class="value-unit">°C</span>
+                        </div>
+                        <div class="secondary-stats">
+                            <div>
+                                <span class="stat-label">بالفهرنهايت:</span>
+                                <strong id="tempFahrenheit" class="stat-value font-mono">-- °F</strong>
+                            </div>
+                            <div>
+                                <span class="stat-label">الحرارة المحسوسة:</span>
+                                <strong id="heatIndex" class="stat-value font-mono">-- °C</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="range-meter">
+                        <div class="range-bar">
+                            <div id="tempRangeFill" class="range-fill temp-fill" style="width: 50%;"></div>
+                        </div>
+                        <div class="range-ticks">
+                            <span>0°C بارد</span>
+                            <span>25°C مثالي</span>
+                            <span>50°C مرتفع</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sensor-card-footer">
+                    <span>مدخل الحساس: Pin 15 (Digital)</span>
+                    <span id="tempExtreme">الحرارة: طبيعية</span>
+                </div>
+            </article>
+
+            <!-- CARD 4: HUMIDITY (DHT-11) -->
+            <article class="sensor-card hum-card">
+                <div class="sensor-card-header">
+                    <div class="sensor-title-group">
+                        <span class="sensor-icon">💧</span>
+                        <div>
+                            <h3>الرطوبة النسبية (DHT-11)</h3>
+                            <span class="sensor-sub">Relative Humidity</span>
+                        </div>
+                    </div>
+                    <span id="humBadge" class="sensor-badge badge-normal">طبيعي</span>
+                </div>
+
+                <div class="sensor-card-body">
+                    <div class="value-display-row">
+                        <div class="main-value">
+                            <span id="humidity" class="value-number">--</span>
+                            <span class="value-unit">%</span>
+                        </div>
+                        <div class="secondary-stats">
+                            <div>
+                                <span class="stat-label">نقطة الندى:</span>
+                                <strong id="dewPoint" class="stat-value font-mono">-- °C</strong>
+                            </div>
+                            <div>
+                                <span class="stat-label">مستوى الجفاف:</span>
+                                <strong id="drynessLevel" class="stat-value font-mono">رطب</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="range-meter">
+                        <div class="range-bar">
+                            <div id="humRangeFill" class="range-fill hum-fill" style="width: 50%;"></div>
+                        </div>
+                        <div class="range-ticks">
+                            <span>0% شديد الجفاف</span>
+                            <span>50% متوازن</span>
+                            <span>100% مشبع</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sensor-card-footer">
+                    <span>تأثير الحريق: الرطوبة المنخفضة تزيد سرعة الاشتعال</span>
+                </div>
+            </article>
+
+        </section>
+
+        <!-- DISASTER LOGGING & BLACKBOX SYSTEM (سجل الكوارث والإنذارات) -->
+        <section class="log-section">
+            <div class="log-card">
+                <div class="log-card-header">
+                    <div class="log-header-title">
+                        <div class="log-icon-wrap">
+                            <span>📋</span>
+                        </div>
+                        <div>
+                            <h2>سجل الكوارث والإنذارات المسجلة (Incident & Event Log)</h2>
+                            <p>نظام التوثيق الآلي للأحداث الطارئة، يسجل كل زلزال وحريق مع ذروة الشدة والمدة الزمنية في
+                                الذاكرة الدائمة</p>
+                        </div>
+                    </div>
+
+                    <div class="log-actions">
+                        <!-- Filters -->
+                        <div class="filter-group">
+                            <button class="filter-btn active" data-filter="all">عرض الكل (<span
+                                    id="countAll">0</span>)</button>
+                            <button class="filter-btn" data-filter="fire">🔥 الحرائق والغاز (<span
+                                    id="countFires">0</span>)</button>
+                            <button class="filter-btn" data-filter="quake">🌋 الزلازل والاهتزازات (<span
+                                    id="countQuakes">0</span>)</button>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="export-group">
+                            <button id="exportCsvBtn" class="btn-action export-btn"
+                                title="تصدير السجل كملف Excel / CSV">
+                                📥 تصدير CSV
+                            </button>
+                            <button id="clearLogBtn" class="btn-action clear-btn" title="مسح سجل الأحداث">
+                                🗑️ مسح السجل
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABLE / LIST -->
+                <div class="log-table-container">
+                    <table class="log-table" id="logTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>نوع الكارثة</th>
+                                <th>تاريخ ووقت البداية</th>
+                                <th>المدة الزمنية</th>
+                                <th>أقصى شدة مسجلة (Peak)</th>
+                                <th>الحالة والبيئة المرافقة</th>
+                                <th>حالة الإنذار</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+
+                    <!-- Empty State -->
+                    <div id="logEmptyState" class="empty-state">
+                        <div class="empty-icon">🛡️</div>
+                        <h3>لا توجد كوارث مسجلة حتى الآن</h3>
+                        <p>النظام في حالة رصد مستمر. عند حدوث أي حريق أو زلزال سيتم توثيقه وحفظه هنا تلقائياً.</p>
+                        <button id="triggerTestEventBtn" class="btn-secondary">
+                            🧪 تجربة تسجيل حدث اختبار
+                        </button>
+                    </div>
+                </div>
+
+                <div class="log-card-footer">
+                    <span>* يتم حفظ كافة السجلات محلياً في المتصفح (LocalStorage) لتبقى محفوظة حتى بعد إغلاق
+                        الصفحة.</span>
+                    <span id="storageSizeDisplay">الذاكرة المستخدمة: 0 KB</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SYSTEM DIAGNOSTICS & CONNECTION BAR -->
+        <section class="diag-section">
+            <div class="diag-grid">
+                <div class="diag-item">
+                    <span class="diag-label">نقطة الوصول (ESP32 Wi-Fi AP)</span>
+                    <strong class="diag-value">ESP32-Forest-Guard</strong>
+                </div>
+                <div class="diag-item">
+                    <span class="diag-label">عنوان الـ IP الافتراضي</span>
+                    <strong id="diagIp" class="diag-value font-mono">192.168.4.1</strong>
+                </div>
+                <div class="diag-item">
+                    <span class="diag-label">مسار واجهة البيانات (REST API)</span>
+                    <strong class="diag-value font-mono">/api/data</strong>
+                </div>
+                <div class="diag-item">
+                    <span class="diag-label">معدل التحديث اللحظي</span>
+                    <strong class="diag-value font-mono">300 ms</strong>
+                </div>
+                <div class="diag-item">
+                    <span class="diag-label">الشاشة المدمجة (I2C LCD)</span>
+                    <strong class="diag-value">16x2 I2C Display (0x27)</strong>
+                </div>
+                <div class="diag-item">
+                    <span class="diag-label">صفارة الإنذار & LED</span>
+                    <strong class="diag-value">Buzzer (Pin 4) + Alert (Pin 2)</strong>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p><strong>نظام حارس الغابات الذكي (ESP32 Forest Guard)</strong> &copy; محطة المراقبة البيئية والإنذار
+                المبكر للكوارث الطبيعية</p>
+            <p class="footer-note">متوافق 100% مع كود العتاد ومتحكم ESP32 • يدعم العمل بدون إنترنت في الميدان</p>
+        </div>
+    </footer>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" class="modal-backdrop hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>⚙️ إعدادات محطة المراقبة</h3>
+                <button id="closeModalBtn" class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="ipInput">عنوان IP الخاص بمتحكم ESP32:</label>
+                    <input type="text" id="ipInput" value="192.168.4.1" placeholder="مثال: 192.168.4.1 أو 192.168.1.50">
+                    <small>الافتراضي هو 192.168.4.1 عند الاتصال بشبكة ESP32-Forest-Guard</small>
+                </div>
+                <div class="form-group">
+                    <label for="pollRateInput">معدل استطلاع البيانات (بالملي ثانية):</label>
+                    <input type="number" id="pollRateInput" value="300" min="100" max="5000" step="50">
+                    <small>موصى به: 300ms للحصول على استجابة سريعة للزلازل والحرائق</small>
+                </div>
+                <div class="form-group">
+                    <label>اختبار صفارة الإنذار الصوتية (Web Audio):</label>
+                    <div class="audio-test-row">
+                        <button id="testFireSirenBtn" class="btn-secondary">🔥 تجربة صفارة الحريق</button>
+                        <button id="testQuakeSirenBtn" class="btn-secondary">🌋 تجربة إنذار الزلزال</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveSettingsBtn" class="btn-primary">حفظ الإعدادات</button>
+                <button id="resetSettingsBtn" class="btn-secondary">استعادة الافتراضي</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT -->
+    <script src="script.js"></script>
+</body>
+
+</html>
